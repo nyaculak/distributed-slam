@@ -42,7 +42,7 @@ SET(SRCS
     KinectGrabber.h
 		)
 # Define the executable target:
-ADD_EXECUTABLE(${sampleName} ${SRCS})
+ADD_EXECUTABLE(${sampleName}.out ${SRCS})
 
 SET_TARGET_PROPERTIES(
 	${sampleName}
