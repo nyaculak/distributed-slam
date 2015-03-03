@@ -26,6 +26,7 @@
 *.exe
 *.out
 *.app
+DistributedSlam
 
 # CMake
 CMakeCache.txt
