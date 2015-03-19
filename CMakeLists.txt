@@ -1,6 +1,4 @@
 #-----------------------------------------------------------------------------------------------
-# CMake file for the MRPT example:  /gravity3d
-#
 #  Run with "ccmake ." at the root directory, or use it as a template for
 #   starting your own programs
 #-----------------------------------------------------------------------------------------------
@@ -39,7 +37,8 @@ FIND_PACKAGE(MRPT REQUIRED slam;vision;gui;topography;hwdrivers;obs)
 SET(SRCS
 		main.cpp
 		SerialPort.cpp SerialPort.h
-    KinectGrabber.h
+		KinectGrabber.h
+		RobotContainer.h
 		)
 # Define the executable target:
 ADD_EXECUTABLE(${sampleName} ${SRCS})
@@ -60,7 +59,8 @@ TARGET_LINK_LIBRARIES(${sampleName}
 	${MRPT_LIBS}  # This is filled by FIND_PACKAGE(MRPT ...)
 	"-lboost_system"
 	"-lboost_thread"
-	"-l pthread" # Optional extra libs...
+	"-l pthread"
+	"-g -Wall -Werror"
 	)
 
 # Set optimized building:

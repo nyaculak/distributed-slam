@@ -50,6 +50,7 @@
 
 #include "SerialPort.h"
 #include "KinectGrabber.h"
+#include "RobotContainer.h"
 
 #define TIMER_MS 10
 #define SERIAL_PORT_ADDRESS "/dev/ttyACM0"
@@ -66,77 +67,31 @@ using namespace std;
 using namespace boost;
 
 CDisplayWindow3D		window("Display Window");
-CDisplayWindow3D 		slamWindow("SLAM OUTPUT");
 CRobotSimulator			the_robot(0,0);
-COccupancyGridMap2D	the_grid;
+COccupancyGridMap2D		the_grid;
+RobotContainer			master_robot(&window, &the_grid);
 CMultiMetricMap*		slam_map;
-CJoystick						joystick;
+CJoystick				joystick;
 
 StdVector_CPose2D		robot_path_GT, robot_path_ODO;
-CPose2D							lastOdo, pose_start;
-bool								we_are_closing = false;
-long								decimation = 1;
+CPose2D					lastOdo, pose_start;
+bool					we_are_closing = false;
+long					decimation = 1;
 
 mrpt::opengl::CSetOfObjectsPtr		gl_grid, gl_slam_grid;
 mrpt::opengl::CSetOfObjectsPtr		gl_robot;
-mrpt::opengl::CPlanarLaserScanPtr gl_scan;
-mrpt::opengl::CPointCloudPtr 			gl_path_GT;
-mrpt::opengl::CPointCloudPtr 			gl_path_ODO;
-
-int	   last_pressed_key = 0;
-
-long   LASER_N_RANGES  = 361;//361;
-double LASER_APERTURE  = M_PI;
-double LASER_STD_ERROR = 0.01;
-double LASER_BEARING_STD_ERROR = DEG2RAD(0.05);
+mrpt::opengl::CPlanarLaserScanPtr 	gl_scan;
+mrpt::opengl::CPointCloudPtr 		gl_path_GT;
+mrpt::opengl::CPointCloudPtr 		gl_path_ODO;
 
 void update_grid_map_3d()
 {
-	if (!gl_grid) gl_grid = CSetOfObjects::Create();
 	gl_grid->clear();
 	the_grid.getAs3DObject( gl_grid );
 }
 
 void setupDisplayWindow()
 {
-	window.setCameraAzimuthDeg(90);
-	window.setCameraElevationDeg(90);
-	//window.setCameraZoom(8);
-
-	slamWindow.setCameraAzimuthDeg(90);
-	slamWindow.setCameraElevationDeg(90);
-
-	the_grid.loadFromBitmapFile("virtual_map1.png", .0275/*12./(800.*3)*/);
-	update_grid_map_3d();
-
-	gl_robot = mrpt::opengl::stock_objects::RobotPioneer();
-	gl_scan = mrpt::opengl::CPlanarLaserScan::Create();
-	gl_robot->insert(gl_scan);
-
-	// paths:
-	gl_path_GT = mrpt::opengl::CPointCloud::Create();
-	gl_path_GT->setColor(0,0,0, 0.7);
-	gl_path_GT->setLocation(0,0, 0.01);
-	gl_path_GT->setPointSize(3);
-
-	gl_path_ODO = mrpt::opengl::CPointCloud::Create();
-	gl_path_ODO->setColor(0,1,0, 0.7);
-	gl_path_ODO->setLocation(0,0, 0.01);
-	gl_path_ODO->setPointSize(2);
-
-	COpenGLScenePtr &theScene = window.get3DSceneAndLock();
-	theScene->insert(gl_grid);
-	theScene->insert(gl_robot);
-	theScene->insert(gl_path_GT);
-	theScene->insert(gl_path_ODO);
-	window.unlockAccess3DScene();
-
-	// slam:
-	if (!gl_slam_grid) gl_slam_grid = CSetOfObjects::Create();
-	COpenGLScenePtr &slamScene = slamWindow.get3DSceneAndLock();
-		slamScene->insert(gl_slam_grid);
-	slamWindow.unlockAccess3DScene();
-
 }
 
 void Run()
@@ -197,25 +152,23 @@ void Start()
 	decimation = 1;
 }
 
-void Setup_Sim()
-{}
-
-void Setup_Bot()
-{}
-
 void RunSimulation()
 {
 	Start();
 
+	/*
 	KinectGrabber kinect_grabber;
 	kinect_grabber.init();
+	*/
 
 	// Initialize serial stream
+	/*
 	SerialPort serial;
 	if(!serial.start(SERIAL_PORT_ADDRESS, 9600)) return;
 	// Begin
 	sleep(5); // wait for arduino bootup
 	serial.end_of_line_char('\n');
+	*/
 	//serial.write_some("BI010\r\n");
 	//serial.write_some("PE011\r\n");
 	//serial.write_some("RA01000\r\n");
@@ -233,9 +186,11 @@ void RunSimulation()
   mapBuilder.options.debugForceInsertion = false;
 
 	// Store serial data
+	/*
 	double angle_rad;
 	double x;
 	double y;
+	*/
 
 	while(1)
 	{
@@ -244,41 +199,43 @@ void RunSimulation()
 		the_robot.simulateInterval(At);
 
 		// Grab angle
+		/*
 		if(serial.angle_mutex_.try_lock()) {
 			x = serial.get_x();
 			y = serial.get_y();
 			angle_rad = serial.get_angle();
 			serial.angle_mutex_.unlock();
 		}
+		*/
 		//cout << "X in: " << x << endl;
 		//cout << "Y in: " << y << endl;
 		//cout << "H in: " << angle_rad << endl << endl;
 
 
 		// Simulate pose
-		/*
 		CPose2D p, odo_now;
 		the_robot.getRealPose(p);
 		the_robot.getOdometry(odo_now);
-		*/
 
 		// Measure pose
+		/*
 		CPose2D p(x/10, y/10, angle_rad);
 		CPose2D odo_now(x/10, y/10, angle_rad);
+		*/
 
 		CObservation2DRangeScanPtr the_scan = CObservation2DRangeScan::Create();
 		// Simulate scan
-		/*
 		the_scan->sensorLabel = "LASER_SIM";
 		the_scan->sensorPose.setFromValues(0.0,0,0.0);
 		the_scan->maxRange = 80;
 		the_scan->aperture = LASER_APERTURE;
 		the_scan->stdError = LASER_STD_ERROR;
 		the_grid.laserScanSimulator(*the_scan, p, 0.2f, LASER_N_RANGES, LASER_STD_ERROR, 1, LASER_BEARING_STD_ERROR);
-		*/
 
 		// Grab scan from Kinect
+		/*
 		kinect_grabber.grab(the_scan);
+		*/
 
 		// Process Action
 		CActionCollectionPtr acts = CActionCollection::Create();
@@ -341,7 +298,58 @@ void RunSimulation()
 		}
 
 		window.forceRepaint();
-		slamWindow.forceRepaint();
+		usleep(3*10e3);
+	}
+}
+
+/*
+void draw()
+{
+	for(int i = 0; i < RobotContainer::num_robots; i++)
+	{
+		RobotContainer::robots[i]->draw();
+	}
+	update_grid_map_3d();
+	window.forceRepaint();
+}
+*/
+
+
+void RunMultiRobotSimulation()
+{
+	window.setCameraAzimuthDeg(90);
+	window.setCameraElevationDeg(90);
+
+	gl_grid = CSetOfObjects::Create();
+	the_grid.loadFromBitmapFile("virtual_map1.png", .0275/*12./(800.*3)*/);
+	update_grid_map_3d();
+	
+	COpenGLScenePtr &theScene = window.get3DSceneAndLock();
+		theScene->insert(gl_grid);
+	window.unlockAccess3DScene();
+
+	static CTicTac tictac;
+
+	while(1)
+	{
+		double At = tictac.Tac();
+		tictac.Tic();
+		master_robot.simulate(At);
+
+		if (os::kbhit())
+		{
+			char c = os::getch();
+			master_robot.control(c);
+		}
+
+		//master_robot.draw();
+		//master_robot.updateGLMap();
+		//master_robot.updateGLSLAMMap();
+		//update_grid_map_3d();
+		update_grid_map_3d();
+		master_robot.updateGLMap();
+		window.forceRepaint();
+		master_robot.updateGLSLAMMap();
 		usleep(3*10e3);
 	}
 }
@@ -353,7 +361,7 @@ int main()
 {
 	try
 	{
-		RunSimulation();
+		RunMultiRobotSimulation();
 		return 0;
 	} catch (std::exception &e)
 	{
