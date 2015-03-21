@@ -1,7 +1,7 @@
 #ifndef RobotContainer_h
 #define RobotContainer_h
 
-long   LASER_N_RANGES  = 361;
+long   LASER_N_RANGES  = 91;
 double LASER_APERTURE  = M_PI;
 double LASER_STD_ERROR = 0.01;
 double LASER_BEARING_STD_ERROR = DEG2RAD(0.05);
@@ -41,6 +41,7 @@ public:
 	void simulate(double);
 	void draw();
 	void control(char);
+	void control(char, char, char, char, char, char);
 	void updateGLMap();
 	void updateGLSLAMMap();
 	
@@ -221,18 +222,24 @@ void RobotContainer::updateGLSLAMMap()
 
 void RobotContainer::control(char c)
 {
-	cout << "Key Pressed: " << c << endl;
-	if (c == 'w')
+	this->control(c, 'w','a','s','d','f');
+}
+
+void RobotContainer::control(char c, char up, char left, char down, char right, char save)
+{
+	if (c == up)
 		robot_simulator.movementCommand(1,0);
-	else if (c == 'a')
+	else if (c == left)
 		robot_simulator.movementCommand(0,1);
-	else if (c == 's')
+	else if (c == down)
 		robot_simulator.movementCommand(-1,0);
-	else if (c == 'd')
+	else if (c == right)
 		robot_simulator.movementCommand(0,-1);
 
-	if (c == 'f')
+	if (c == save)
 		mostLikMap->saveMetricMapRepresentationToFile("map_out.png");
 }
+
+void RobotContainer::mergeMap();
 
 #endif

@@ -52,7 +52,6 @@
 #include "KinectGrabber.h"
 #include "RobotContainer.h"
 
-#define TIMER_MS 10
 #define SERIAL_PORT_ADDRESS "/dev/ttyACM0"
 
 using namespace mrpt;
@@ -67,16 +66,14 @@ using namespace std;
 using namespace boost;
 
 CDisplayWindow3D		window("Display Window");
-CRobotSimulator			the_robot(0,0);
 COccupancyGridMap2D		the_grid;
 RobotContainer			master_robot(&window, &the_grid);
+RobotContainer			slave_robot(&window, &the_grid);
 CMultiMetricMap*		slam_map;
 CJoystick				joystick;
 
 StdVector_CPose2D		robot_path_GT, robot_path_ODO;
 CPose2D					lastOdo, pose_start;
-bool					we_are_closing = false;
-long					decimation = 1;
 
 mrpt::opengl::CSetOfObjectsPtr		gl_grid, gl_slam_grid;
 mrpt::opengl::CSetOfObjectsPtr		gl_robot;
@@ -90,85 +87,23 @@ void update_grid_map_3d()
 	the_grid.getAs3DObject( gl_grid );
 }
 
-void setupDisplayWindow()
-{
-}
-
-void Run()
-{
-	try
-	{
-		if (1) // change to joystick detection
-		{
-			float       x,y,z;
-			vector_bool btns;
-
-			if (joystick.getJoystickPosition(0,x,y,z,btns))
-			{
-				float v = the_robot.getV();
-				float w = the_robot.getW();
-
-				v = -y;
-				w = -x;
-
-				the_robot.movementCommand(v,w);
-			}
-		}
-
-		CPose2D p;
-		the_robot.getRealPose(p);
-	}
-	catch(std::exception &e)
-    {
-    	cout << e.what() << endl;
-    }
-  catch(...)
-  {
-	cout << "Unknown Exception" << endl;
-  }
-}
-
-void Start()
-{
-	setupDisplayWindow();
-
-	the_robot.getRealPose(pose_start);
-	the_robot.resetOdometry(CPose2D(0,0,0));
-	lastOdo = CPose2D(0,0,0);
-
-	// odo errors:
-	double Ax_err_bias   = 1e-5;//0;//.00001;
-	double Ax_err_std    = 10e-4;
-	double Ay_err_bias   = 1e-5;//0;//.00001;
-	double Ay_err_std    = 10e-4;
-	double Aphi_err_bias = 1e-5;//0;//5e-4;
-	double Aphi_err_std  = 10e-4;
-
-	the_robot.setOdometryErrors(true,
-		Ax_err_bias, Ax_err_std,
-		Ay_err_bias, Ay_err_std,
-		Aphi_err_bias, Aphi_err_std);
-
-	decimation = 1;
-}
-
+/*
 void RunSimulation()
 {
 	Start();
 
-	/*
+
 	KinectGrabber kinect_grabber;
 	kinect_grabber.init();
-	*/
 
 	// Initialize serial stream
-	/*
+
 	SerialPort serial;
 	if(!serial.start(SERIAL_PORT_ADDRESS, 9600)) return;
 	// Begin
 	sleep(5); // wait for arduino bootup
 	serial.end_of_line_char('\n');
-	*/
+	
 	//serial.write_some("BI010\r\n");
 	//serial.write_some("PE011\r\n");
 	//serial.write_some("RA01000\r\n");
@@ -186,11 +121,11 @@ void RunSimulation()
   mapBuilder.options.debugForceInsertion = false;
 
 	// Store serial data
-	/*
+	
 	double angle_rad;
 	double x;
 	double y;
-	*/
+	
 
 	while(1)
 	{
@@ -199,14 +134,14 @@ void RunSimulation()
 		the_robot.simulateInterval(At);
 
 		// Grab angle
-		/*
+		
 		if(serial.angle_mutex_.try_lock()) {
 			x = serial.get_x();
 			y = serial.get_y();
 			angle_rad = serial.get_angle();
 			serial.angle_mutex_.unlock();
 		}
-		*/
+		
 		//cout << "X in: " << x << endl;
 		//cout << "Y in: " << y << endl;
 		//cout << "H in: " << angle_rad << endl << endl;
@@ -218,10 +153,10 @@ void RunSimulation()
 		the_robot.getOdometry(odo_now);
 
 		// Measure pose
-		/*
+		
 		CPose2D p(x/10, y/10, angle_rad);
 		CPose2D odo_now(x/10, y/10, angle_rad);
-		*/
+		
 
 		CObservation2DRangeScanPtr the_scan = CObservation2DRangeScan::Create();
 		// Simulate scan
@@ -233,9 +168,9 @@ void RunSimulation()
 		the_grid.laserScanSimulator(*the_scan, p, 0.2f, LASER_N_RANGES, LASER_STD_ERROR, 1, LASER_BEARING_STD_ERROR);
 
 		// Grab scan from Kinect
-		/*
+		
 		kinect_grabber.grab(the_scan);
-		*/
+		
 
 		// Process Action
 		CActionCollectionPtr acts = CActionCollection::Create();
@@ -300,20 +235,7 @@ void RunSimulation()
 		window.forceRepaint();
 		usleep(3*10e3);
 	}
-}
-
-/*
-void draw()
-{
-	for(int i = 0; i < RobotContainer::num_robots; i++)
-	{
-		RobotContainer::robots[i]->draw();
-	}
-	update_grid_map_3d();
-	window.forceRepaint();
-}
-*/
-
+}*/
 
 void RunMultiRobotSimulation()
 {
@@ -335,21 +257,21 @@ void RunMultiRobotSimulation()
 		double At = tictac.Tac();
 		tictac.Tic();
 		master_robot.simulate(At);
+		slave_robot.simulate(At);
 
 		if (os::kbhit())
 		{
 			char c = os::getch();
 			master_robot.control(c);
+			slave_robot.control(c, 'i', 'j', 'k', 'l', 'p');
 		}
 
-		//master_robot.draw();
+		master_robot.draw();
+		slave_robot.draw();
 		//master_robot.updateGLMap();
 		//master_robot.updateGLSLAMMap();
 		//update_grid_map_3d();
-		update_grid_map_3d();
-		master_robot.updateGLMap();
-		window.forceRepaint();
-		master_robot.updateGLSLAMMap();
+		//window.forceRepaint();
 		usleep(3*10e3);
 	}
 }
